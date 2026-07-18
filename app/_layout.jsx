@@ -58,6 +58,16 @@ export default function RootLayout() {
                 />
 
                 <Drawer.Screen
+                    name="contacts"
+                    options={{
+                        title: 'Contacts',
+                        drawerIcon: ({ color, size }) => (
+                            <Ionicons name="people-outline" size={size} color={color} />
+                        ),
+                    }}
+                />
+
+                <Drawer.Screen
                     name="index"
                     options={{
                         drawerItemStyle: { display: 'none' } // Hide index from drawer menu
