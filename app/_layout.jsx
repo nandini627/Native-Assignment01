@@ -36,7 +36,17 @@ export default function RootLayout() {
                         ),
                     }}
                 />
-                {/* Further drawer screens will go here in later modules */}
+
+                <Drawer.Screen
+                    name="camera"
+                    options={{
+                        title: 'Camera',
+                        drawerIcon: ({ color, size }) => (
+                            <Ionicons name="camera-outline" size={size} color={color} />
+                        ),
+                    }}
+                />
+
                 <Drawer.Screen
                     name="index"
                     options={{
