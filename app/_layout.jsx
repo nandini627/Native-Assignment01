@@ -83,6 +83,13 @@ export default function RootLayout() {
                         drawerItemStyle: { display: 'none' } // Hide index from drawer menu
                     }}
                 />
+
+                <Drawer.Screen
+                    name="survey-preview"
+                    options={{
+                        drawerItemStyle: { display: 'none' } // Hide survey preview from drawer menu
+                    }}
+                />
             </Drawer>
         </GestureHandlerRootView>
     );
