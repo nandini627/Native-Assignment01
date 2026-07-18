@@ -68,6 +68,16 @@ export default function RootLayout() {
                 />
 
                 <Drawer.Screen
+                    name="clipboard"
+                    options={{
+                        title: 'Clipboard',
+                        drawerIcon: ({ color, size }) => (
+                            <Ionicons name="clipboard-outline" size={size} color={color} />
+                        ),
+                    }}
+                />
+
+                <Drawer.Screen
                     name="index"
                     options={{
                         drawerItemStyle: { display: 'none' } // Hide index from drawer menu
