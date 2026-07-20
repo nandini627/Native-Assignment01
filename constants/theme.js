@@ -1,54 +1,54 @@
 // ============================================================
 // constants/theme.js
 // Central design system — colors, spacing, typography, shadows
-// Import this file wherever you need consistent styling
 // ============================================================
 
 export const Colors = {
-    // Primary brand orange
-    primary: '#F97316',
-    primaryDark: '#C2410C',
-    primaryLight: '#FFEDD5',
+    // Primary brand purple
+    primary: '#8B5CF6',
+    primaryDark: '#7C3AED',
+    primaryLight: '#DDD6FE', // Accent
 
-    // Accent / success -> orange shades
-    success: '#F97316',
-    successLight: '#FFEDD5',
+    // Accent / success
+    success: '#8B5CF6',
+    successLight: '#F3E8FF',
 
-    // Warning amber -> orange shades
-    warning: '#F97316',
-    warningLight: '#FFEDD5',
+    // Warning amber
+    warning: '#8B5CF6',
+    warningLight: '#F3E8FF',
 
-    // Danger red -> orange shades
-    danger: '#F97316',
-    dangerLight: '#FFEDD5',
+    // Danger red
+    danger: '#8B5CF6',
+    dangerLight: '#F3E8FF',
 
-    // Neutral grays
-    background: '#FAFAFA',
+    // Neutral / Structural
+    background: '#F8F5FF',
     surface: '#FFFFFF',
-    border: '#E5E7EB',
-    divider: '#FAFAFA',
+    border: '#E9D5FF',
+    divider: '#E9D5FF',
 
     // Text
-    textPrimary: '#171717',
-    textSecondary: '#525252',
-    textMuted: '#A3A3A3',
+    textPrimary: '#2E1065',
+    textSecondary: '#6D28D9', // Headings / subheadings
+    textBody: '#4B5563',      // Body text if needed
+    textMuted: '#6B7280',     // Captions
     textWhite: '#FFFFFF',
 
     // Tabs active / inactive
-    tabActive: '#F97316',
-    tabInactive: '#A3A3A3',
+    tabActive: '#8B5CF6',
+    tabInactive: '#9CA3AF',
 
     // Priority badge colors
-    priorityHigh: '#F97316',
-    priorityHighBg: '#FFEDD5',
-    priorityMedium: '#F97316',
-    priorityMediumBg: '#FFEDD5',
-    priorityLow: '#F97316',
-    priorityLowBg: '#FFEDD5',
+    priorityHigh: '#6D28D9',
+    priorityHighBg: '#EDE9FE',
+    priorityMedium: '#8B5CF6',
+    priorityMediumBg: '#F3E8FF',
+    priorityLow: '#A78BFA',
+    priorityLowBg: '#F5F3FF',
 
     // Gradient-like header overlay
-    headerGradientStart: '#F97316',
-    headerGradientEnd: '#F97316',
+    headerGradientStart: '#A78BFA', // Secondary logo color
+    headerGradientEnd: '#8B5CF6',
 };
 
 export const Spacing = {
@@ -65,7 +65,7 @@ export const FontSize = {
     xs: 11,
     sm: 13,
     md: 15,
-    lg: 17,
+    lg: 18,
     xl: 20,
     xxl: 24,
     xxxl: 30,
@@ -80,36 +80,37 @@ export const FontWeight = {
     extraBold: '800',
 };
 
+// Rounded corners (16-20px based on prompt)
 export const BorderRadius = {
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 20,
-    xxl: 24,
+    sm: 12,
+    md: 16,
+    lg: 20,
+    xl: 24,
+    xxl: 30,
     full: 999,
 };
 
-// Reusable card shadow (Android elevation + iOS shadow)
+// Soft shadows and elevation
 export const Shadows = {
     sm: {
         elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
+        shadowColor: '#2E1065',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
     },
     md: {
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
+        elevation: 4,
+        shadowColor: '#2E1065',
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.08,
-        shadowRadius: 8,
+        shadowRadius: 15,
     },
     lg: {
-        elevation: 10,
-        shadowColor: '#F97316',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 16,
+        elevation: 8,
+        shadowColor: '#2E1065',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.12,
+        shadowRadius: 20,
     },
 };

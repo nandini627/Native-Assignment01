@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, Image, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from 'expo-router';
 import { DrawerActions } from '@react-navigation/native';
@@ -9,27 +10,89 @@ import { Colors, Spacing, FontSize, BorderRadius, FontWeight, Shadows } from '..
 
 export default function CameraScreen() {
     const navigation = useNavigation();
-    const [permission, requestPermission] = useCameraPermissions();
-    const [photo, setPhoto] = useState(null);
-    const [captureTime, setCaptureTime] = useState(null);
-    const [isCameraReady, setIsCameraReady] = useState(false);
-
-    // Simulate loading for the camera
+    const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+    const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions();
+    const [photos, setPhotos] = useState([]);
+    const photosRef = useRef([]);
     const [cameraLoading, setCameraLoading] = useState(true);
-
     const cameraRef = useRef(null);
 
+    // Keep ref always in sync with state — avoids stale closures in callbacks
+    const updatePhotos = useCallback((updaterFn) => {
+        const updated = updaterFn(photosRef.current);
+        photosRef.current = updated;
+        setPhotos(updated);
+    }, []);
+
     useEffect(() => {
-        if (permission?.granted) {
-            // Slight delay to simulate camera initialization for the loading indicator requirement
-            const timer = setTimeout(() => {
-                setCameraLoading(false);
-            }, 800);
+        if (cameraPermission?.granted) {
+            const timer = setTimeout(() => setCameraLoading(false), 800);
             return () => clearTimeout(timer);
         }
-    }, [permission]);
+    }, [cameraPermission]);
 
-    if (!permission) {
+    const takePicture = useCallback(async () => {
+        if (cameraRef.current) {
+            try {
+                const photoData = await cameraRef.current.takePictureAsync();
+                const newPhoto = {
+                    id: Date.now().toString(),
+                    uri: photoData.uri,
+                    captureTime: new Date().toLocaleString(),
+                    saved: false,
+                };
+                const updated = [newPhoto, ...photosRef.current];
+                photosRef.current = updated;
+                setPhotos(updated);
+            } catch (error) {
+                Alert.alert('Error', 'Failed to capture photo.');
+            }
+        }
+    }, []);
+
+    const deletePhoto = useCallback((id) => {
+        Alert.alert(
+            'Delete Photo',
+            'Are you sure you want to delete this photo?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => updatePhotos(prev => prev.filter(photo => photo.id !== id)),
+                },
+            ]
+        );
+    }, [updatePhotos]);
+
+    const saveToGallery = useCallback(async (photoId, photoUri, alreadySaved) => {
+        if (alreadySaved) {
+            Alert.alert('Already Saved', 'This photo is already in your gallery.');
+            return;
+        }
+        let hasPermission = mediaPermission && mediaPermission.granted;
+        if (!hasPermission) {
+            const resp = await requestMediaPermission();
+            hasPermission = resp.granted;
+        }
+        if (!hasPermission) {
+            Alert.alert('Permission Denied', 'We need permission to save photos to your gallery.');
+            return;
+        }
+        try {
+            await MediaLibrary.createAssetAsync(photoUri);
+            Alert.alert('Saved!', 'Photo has been saved to your gallery.');
+            updatePhotos(prev =>
+                prev.map(p => p.id === photoId ? { ...p, saved: true } : p)
+            );
+        } catch (err) {
+            Alert.alert('Error', 'Failed to save photo. Please try again.');
+        }
+    }, [mediaPermission, updatePhotos]);
+
+    // --- All hooks are above this line, conditional renders below are safe ---
+
+    if (!cameraPermission) {
         return (
             <View style={styles.centerContainer}>
                 <ActivityIndicator size="large" color={Colors.primary} />
@@ -37,7 +100,7 @@ export default function CameraScreen() {
         );
     }
 
-    if (!permission.granted) {
+    if (!cameraPermission.granted) {
         return (
             <View style={styles.container}>
                 <AppHeader
@@ -48,52 +111,13 @@ export default function CameraScreen() {
                 <View style={styles.permissionContainer}>
                     <Ionicons name="camera-outline" size={64} color={Colors.textMuted} />
                     <Text style={styles.message}>We need your permission to show the camera</Text>
-                    <Pressable style={styles.btn} onPress={requestPermission}>
-                        <Text style={styles.btnText}>Grant Permission</Text>
+                    <Pressable style={styles.btn} onPress={requestCameraPermission}>
+                        <Text style={styles.btnText}>Grant Camera Permission</Text>
                     </Pressable>
                 </View>
             </View>
         );
     }
-
-    const takePicture = async () => {
-        if (cameraRef.current) {
-            try {
-                const photoData = await cameraRef.current.takePictureAsync();
-                setPhoto(photoData.uri);
-                setCaptureTime(new Date().toLocaleString());
-            } catch (error) {
-                Alert.alert('Error', 'Failed to capture photo.');
-            }
-        }
-    };
-
-    const retakePicture = () => {
-        setPhoto(null);
-        setCaptureTime(null);
-    };
-
-    const deletePhoto = () => {
-        Alert.alert(
-            'Delete Photo',
-            'Are you sure you want to delete this photo?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => {
-                        setPhoto(null);
-                        setCaptureTime(null);
-                    },
-                },
-            ]
-        );
-    };
-
-    const onCameraReady = () => {
-        setIsCameraReady(true);
-    };
 
     return (
         <View style={styles.container}>
@@ -103,99 +127,87 @@ export default function CameraScreen() {
                 onBack={() => navigation.dispatch(DrawerActions.openDrawer())}
             />
 
-            {!photo ? (
-                <View style={styles.cameraContainer}>
-                    {cameraLoading && (
-                        <View style={styles.loadingOverlay}>
-                            <ActivityIndicator size="large" color={Colors.primary} />
-                            <Text style={styles.loadingText}>Loading Camera...</Text>
+            {/* TOP: Fixed Camera Viewfinder */}
+            <View style={styles.topCameraSection}>
+                {cameraLoading && (
+                    <View style={styles.loadingOverlay}>
+                        <ActivityIndicator size="large" color={Colors.primary} />
+                        <Text style={styles.loadingText}>Loading Camera...</Text>
+                    </View>
+                )}
+                <CameraView
+                    style={styles.camera}
+                    ref={cameraRef}
+                    onCameraReady={() => setCameraLoading(false)}
+                />
+                <View style={styles.controlsOverlay}>
+                    <Pressable style={styles.captureBtn} onPress={takePicture}>
+                        <View style={styles.captureInnerBtn} />
+                    </Pressable>
+                </View>
+            </View>
+
+            {/* BOTTOM: Scrollable Photo Gallery */}
+            <ScrollView style={styles.bottomSection} contentContainerStyle={styles.galleryContent}>
+                <Text style={styles.galleryTitle}>
+                    {photos.length === 0 ? 'No photos yet' : `${photos.length} Photo${photos.length > 1 ? 's' : ''} Captured`}
+                </Text>
+
+                {photos.length === 0 ? (
+                    <View style={styles.emptyGallery}>
+                        <Ionicons name="images-outline" size={40} color={Colors.textMuted} />
+                        <Text style={styles.emptyGalleryText}>Tap the shutter button above to capture photos.</Text>
+                    </View>
+                ) : (
+                    photos.map(p => (
+                        <View key={p.id} style={styles.photoCard}>
+                            <Image source={{ uri: p.uri }} style={styles.thumbnail} />
+                            <View style={styles.photoInfo}>
+                                <View style={styles.timeRow}>
+                                    <Ionicons name="time-outline" size={14} color={Colors.textSecondary} />
+                                    <Text style={styles.captureTimeText}>{p.captureTime}</Text>
+                                </View>
+                                <View style={styles.actionRow}>
+                                    <Pressable
+                                        style={[styles.actionBtn, p.saved ? styles.savedBtn : styles.saveBtn]}
+                                        onPress={() => saveToGallery(p.id, p.uri, p.saved)}
+                                    >
+                                        <Ionicons
+                                            name={p.saved ? 'checkmark-circle' : 'download-outline'}
+                                            size={16}
+                                            color={p.saved ? Colors.success : Colors.primaryDark}
+                                        />
+                                        <Text style={[styles.saveBtnText, p.saved && { color: Colors.success }]}>
+                                            {p.saved ? 'Saved' : 'Save to Gallery'}
+                                        </Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={[styles.actionBtn, styles.deleteBtn]}
+                                        onPress={() => deletePhoto(p.id)}
+                                    >
+                                        <Ionicons name="trash-outline" size={16} color={Colors.danger} />
+                                        <Text style={styles.deleteBtnText}>Delete</Text>
+                                    </Pressable>
+                                </View>
+                            </View>
                         </View>
-                    )}
-
-                    <View style={styles.cameraFrame}>
-                        <CameraView
-                            style={styles.camera}
-                            ref={cameraRef}
-                            onCameraReady={onCameraReady}
-                        />
-                    </View>
-
-                    <View style={styles.controls}>
-                        <Pressable style={styles.captureBtn} onPress={takePicture}>
-                            <View style={styles.captureInnerBtn} />
-                        </Pressable>
-                    </View>
-                </View>
-            ) : (
-                <View style={styles.previewContainer}>
-                    <Image source={{ uri: photo }} style={styles.previewImage} />
-
-                    <View style={styles.infoCard}>
-                        <Ionicons name="time-outline" size={16} color={Colors.textSecondary} />
-                        <Text style={styles.captureTimeText}>Captured: {captureTime}</Text>
-                    </View>
-
-                    <View style={styles.actionRow}>
-                        <Pressable style={styles.actionBtnOutline} onPress={retakePicture}>
-                            <Ionicons name="refresh" size={20} color={Colors.primary} />
-                            <Text style={styles.actionBtnTextOutline}>Retake</Text>
-                        </Pressable>
-                        <Pressable style={[styles.actionBtn, styles.actionBtnDanger]} onPress={deletePhoto}>
-                            <Ionicons name="trash-outline" size={20} color={Colors.textWhite} />
-                            <Text style={styles.actionBtnText}>Delete</Text>
-                        </Pressable>
-                    </View>
-                </View>
-            )}
+                    ))
+                )}
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.background,
-    },
-    centerContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    permissionContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: Spacing.xl,
-    },
-    message: {
-        textAlign: 'center',
-        paddingBottom: Spacing.xl,
-        marginTop: Spacing.md,
-        fontSize: FontSize.lg,
-        color: Colors.textSecondary,
-    },
-    btn: {
-        backgroundColor: Colors.primary,
-        paddingHorizontal: Spacing.xl,
-        paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.md,
-    },
-    btnText: {
-        color: Colors.textWhite,
-        fontWeight: FontWeight.bold,
-        fontSize: FontSize.md,
-    },
-    cameraContainer: {
-        flex: 1,
-        position: 'relative',
-    },
-    cameraFrame: {
-        flex: 1,
-        overflow: 'hidden',
-    },
-    camera: {
-        flex: 1,
-    },
+    container: { flex: 1, backgroundColor: Colors.background },
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    permissionContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xl },
+    message: { textAlign: 'center', marginTop: Spacing.md, marginBottom: Spacing.xl, fontSize: FontSize.lg, color: Colors.textSecondary },
+    btn: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.md },
+    btnText: { color: Colors.textWhite, fontWeight: FontWeight.bold, fontSize: FontSize.md },
+
+    topCameraSection: { height: '43%', backgroundColor: '#000', position: 'relative' },
+    camera: { flex: 1 },
     loadingOverlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: Colors.surface,
@@ -203,95 +215,62 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         zIndex: 10,
     },
-    loadingText: {
-        marginTop: Spacing.md,
-        color: Colors.textSecondary,
-        fontWeight: FontWeight.medium,
-    },
-    controls: {
-        backgroundColor: '#000',
-        paddingVertical: Spacing.xl,
+    loadingText: { marginTop: Spacing.md, color: Colors.textSecondary, fontWeight: FontWeight.medium },
+    controlsOverlay: {
+        position: 'absolute',
+        bottom: Spacing.lg,
+        left: 0,
+        right: 0,
         alignItems: 'center',
-        paddingBottom: 40,
+        zIndex: 5,
     },
     captureBtn: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: 'transparent',
-        borderWidth: 4,
-        borderColor: Colors.textWhite,
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        borderWidth: 3,
+        borderColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.2)',
     },
-    captureInnerBtn: {
-        width: 54,
-        height: 54,
-        borderRadius: 27,
-        backgroundColor: Colors.textWhite,
-    },
-    previewContainer: {
-        flex: 1,
-        padding: Spacing.md,
+    captureInnerBtn: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#fff' },
+
+    bottomSection: { flex: 1, backgroundColor: Colors.background },
+    galleryContent: { padding: Spacing.lg, paddingBottom: Spacing.xxl * 2 },
+    galleryTitle: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.textSecondary, marginBottom: Spacing.md },
+
+    emptyGallery: { alignItems: 'center', paddingVertical: Spacing.xxl },
+    emptyGalleryText: { marginTop: Spacing.sm, color: Colors.textMuted, fontSize: FontSize.sm, textAlign: 'center' },
+
+    photoCard: {
+        flexDirection: 'row',
         backgroundColor: Colors.surface,
-    },
-    previewImage: {
-        flex: 1,
         borderRadius: BorderRadius.lg,
-        ...Shadows.md,
-    },
-    infoCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.background,
         padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        marginTop: Spacing.lg,
-        gap: Spacing.sm,
+        marginBottom: Spacing.md,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        ...Shadows.sm,
     },
-    captureTimeText: {
-        color: Colors.textPrimary,
-        fontSize: FontSize.md,
-        fontWeight: FontWeight.medium,
-    },
-    actionRow: {
-        flexDirection: 'row',
-        gap: Spacing.md,
-        marginTop: Spacing.lg,
-        marginBottom: Spacing.xxxl,
-    },
+    thumbnail: { width: 90, height: 90, borderRadius: BorderRadius.sm },
+    photoInfo: { flex: 1, marginLeft: Spacing.md, justifyContent: 'space-between' },
+    timeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+    captureTimeText: { color: Colors.textPrimary, fontSize: FontSize.sm, fontWeight: FontWeight.medium, flexShrink: 1 },
+
+    actionRow: { flexDirection: 'row', gap: Spacing.sm },
     actionBtn: {
         flex: 1,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        gap: Spacing.sm,
+        paddingVertical: Spacing.sm,
+        borderRadius: BorderRadius.sm,
+        gap: 4,
     },
-    actionBtnDanger: {
-        backgroundColor: Colors.danger,
-    },
-    actionBtnOutline: {
-        flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: Spacing.md,
-        borderRadius: BorderRadius.md,
-        borderWidth: 1,
-        borderColor: Colors.primary,
-        backgroundColor: Colors.surface,
-        gap: Spacing.sm,
-    },
-    actionBtnText: {
-        color: Colors.textWhite,
-        fontWeight: FontWeight.bold,
-        fontSize: FontSize.md,
-    },
-    actionBtnTextOutline: {
-        color: Colors.primary,
-        fontWeight: FontWeight.bold,
-        fontSize: FontSize.md,
-    },
+    saveBtn: { backgroundColor: Colors.primaryLight },
+    savedBtn: { backgroundColor: Colors.primaryLight, opacity: 0.7 },
+    deleteBtn: { backgroundColor: Colors.dangerLight },
+    saveBtnText: { color: Colors.primaryDark, fontWeight: FontWeight.bold, fontSize: FontSize.xs },
+    deleteBtnText: { color: Colors.danger, fontWeight: FontWeight.bold, fontSize: FontSize.xs },
 });

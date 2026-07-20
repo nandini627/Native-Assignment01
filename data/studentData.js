@@ -43,8 +43,8 @@ export const RECENT_SURVEYS = [
 
 // Quick-action cards shown on the dashboard
 export const QUICK_ACTIONS = [
-    { id: '1', title: 'New Survey', icon: '📝', route: '/survey', color: '#F97316' },
-    { id: '2', title: 'Camera', icon: '📷', route: '/camera', color: '#F97316' },
-    { id: '3', title: 'Location', icon: '📍', route: '/location', color: '#F97316' },
-    { id: '4', title: 'Contacts', icon: '👥', route: '/contacts', color: '#F97316' },
+    { id: '1', title: 'New Survey', icon: '📝', route: '/survey', color: '#8B5CF6' },
+    { id: '2', title: 'Camera', icon: '📷', route: '/camera', color: '#8B5CF6' },
+    { id: '3', title: 'Location', icon: '📍', route: '/location', color: '#8B5CF6' },
+    { id: '4', title: 'Contacts', icon: '👥', route: '/contacts', color: '#8B5CF6' },
 ];
