@@ -6,6 +6,9 @@
 //   subtitle   — optional small subtitle below title
 //   showBack   — show a back arrow (default false)
 //   onBack     — callback when back arrow pressed
+//   showHamburger — show hamburger menu icon (default false)
+//   onHamburger   — callback when hamburger pressed
+//   onProfilePress — callback when profile avatar pressed
 // ============================================================
 
 import React from 'react';
@@ -18,19 +21,45 @@ import {
     Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Colors, FontSize, FontWeight, Spacing } from '../../constants/theme';
 
-export default function AppHeader({ title, subtitle, showBack = false, onBack }) {
+
+
+export default function AppHeader({
+    title,
+    subtitle,
+    showBack = false,
+    onBack,
+    showHamburger = false,
+    onHamburger,
+    onProfilePress,
+}) {
+    const router = useRouter();
+
+    const handleProfilePress = () => {
+        if (onProfilePress) {
+            onProfilePress();
+        } else {
+            router.push('/(tabs)/profile');
+        }
+    };
+
     return (
         <View style={styles.wrapper}>
             {/* Status bar area */}
             <StatusBar backgroundColor={Colors.primary} barStyle="light-content" />
 
             <View style={styles.container}>
-                {/* Left: back button or hamburger placeholder */}
+                {/* Left: hamburger or back button */}
                 <View style={styles.left}>
-                    {showBack && (
-                        <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
+                    {showHamburger && (
+                        <TouchableOpacity onPress={onHamburger} style={styles.iconBtn} activeOpacity={0.7}>
+                            <Ionicons name="menu" size={26} color={Colors.textWhite} />
+                        </TouchableOpacity>
+                    )}
+                    {!showHamburger && showBack && (
+                        <TouchableOpacity onPress={onBack} style={styles.iconBtn} activeOpacity={0.7}>
                             <Ionicons name="arrow-back" size={22} color={Colors.textWhite} />
                         </TouchableOpacity>
                     )}
@@ -44,10 +73,12 @@ export default function AppHeader({ title, subtitle, showBack = false, onBack })
                     ) : null}
                 </View>
 
-                {/* Right: notification bell icon */}
+                {/* Right: profile avatar */}
                 <View style={styles.right}>
-                    <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-                        <Ionicons name="notifications-outline" size={22} color={Colors.textWhite} />
+                    <TouchableOpacity style={styles.avatarBtn} onPress={handleProfilePress} activeOpacity={0.8}>
+                        <View style={styles.avatar}>
+                            <Ionicons name="person" size={20} color={Colors.textWhite} />
+                        </View>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -68,7 +99,7 @@ const styles = StyleSheet.create({
         paddingVertical: Spacing.lg,
     },
     left: {
-        width: 36,
+        width: 40,
         alignItems: 'flex-start',
     },
     center: {
@@ -76,7 +107,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     right: {
-        width: 36,
+        width: 40,
         alignItems: 'flex-end',
     },
     title: {
@@ -91,10 +122,21 @@ const styles = StyleSheet.create({
         marginTop: 2,
         letterSpacing: 0.2,
     },
-    backBtn: {
-        padding: 4,
-    },
     iconBtn: {
         padding: 4,
+    },
+    avatarBtn: {
+        borderRadius: 999,
+        borderWidth: 2,
+        borderColor: Colors.primaryLight,
+        overflow: 'hidden',
+    },
+    avatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 999,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.primaryDark,
     },
 });

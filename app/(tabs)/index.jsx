@@ -23,8 +23,8 @@ export default function Dashboard() {
         <View style={styles.container}>
             <AppHeader
                 title="Dashboard"
-                showBack={true}
-                onBack={() => navigation.dispatch(DrawerActions.openDrawer())}
+                showHamburger={true}
+                onHamburger={() => navigation.dispatch(DrawerActions.openDrawer())}
             />
             <ScrollView
                 style={styles.screen}
